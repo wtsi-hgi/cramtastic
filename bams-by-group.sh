@@ -33,7 +33,8 @@ main() {
     $4 == GID && $8 == "f" && $1 ~ REGEX {
       print $1 "AA=="
     }
-  '
+  ' \
+  | base64 -di
 }
 
 main "$@"
