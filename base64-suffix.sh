@@ -30,7 +30,7 @@ main() {
   local sample
   local sample_bin
   for trial in $(seq 0 $(( (TRIALS * 3) - 1 ))); do
-    sample="$(echo "$(random_data "${trial}")${txt_suffix}" | base64)"
+    sample="$(echo -n "$(random_data "${trial}")${txt_suffix}" | base64)"
     sample_bin="$(echo "${sample}" | tr -dc "=" | wc -c)"
     b64_suffix[${sample_bin}]="$(common_suffix "${b64_suffix[${sample_bin}]-${sample}}" "${sample}")"
 
