@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Find the command base64 suffices for a given plaintext suffix
+# Find the common base64 suffices for a given plaintext suffix
 # Christopher Harrison <ch12@sanger.ac.uk>
 
 set -eu
