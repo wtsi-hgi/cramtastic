@@ -8,6 +8,7 @@
 (require racket/contract
          racket/function
          racket/list
+         racket/set
          racket/vector
          net/base64)
 
@@ -132,20 +133,6 @@
                ((cram1 cram2 cram3) (base64-suffices ".cram"))
                ((test1 test2 test3) (base64-suffices "test")))
 
-    (define-simple-check (check-contains? needle haystack)
-                         (ormap (curry equal? needle) haystack))
-
-    (let ((bam-suffices (list bam1 bam2 bam3)))
-      (check-contains? "uYmFt"     bam-suffices)
-      (check-contains? "5iYW0="    bam-suffices)
-      (check-contains? "LmJhbQ=="  bam-suffices))
-
-    (let ((cram-suffices (list cram1 cram2 cram3)))
-      (check-contains? "5jcmFt"    cram-suffices)
-      (check-contains? "LmNyYW0="  cram-suffices)
-      (check-contains? "uY3JhbQ==" cram-suffices))
-
-    (let ((test-suffices (list test1 test2 test3)))
-      (check-contains? "0ZXN0"     test-suffices)
-      (check-contains? "Rlc3Q="    test-suffices)
-      (check-contains? "dGVzdA=="  test-suffices))))
+    (check-equal? (set "uYmFt"  "5iYW0="   "LmJhbQ==")  (set bam1  bam2  bam3))
+    (check-equal? (set "5jcmFt" "LmNyYW0=" "uY3JhbQ==") (set cram1 cram2 cram3))
+    (check-equal? (set "0ZXN0"  "Rlc3Q="   "dGVzdA==")  (set test1 test2 test3))))
