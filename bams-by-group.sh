@@ -16,7 +16,7 @@ group_id() {
 base64_regex() {
   local suffix="$1"
 
-  base64-suffix.sh "${suffix}" 2>/dev/null \
+  base64-suffix.rkt "${suffix}" 2>/dev/null \
   | paste -sd "|" \
   | sed "s/.*/(&)$/"
 }
