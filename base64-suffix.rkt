@@ -13,10 +13,10 @@
          net/base64)
 
 
-(provide (contract-out
+(provide/contract
   (base64-suffices (->* (string?)
                         (exact-positive-integer?)
-                        (values string? string? string?)))))
+                        (values string? string? string?))))
 
 
 ;; Generate a random string of a given length, where each character
