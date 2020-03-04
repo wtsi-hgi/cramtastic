@@ -1,7 +1,10 @@
 #!/usr/bin/env racket
 
 ;;; Find the common base64 suffices of a given plaintext suffix
-;;; Christopher Harrison <ch12@sanger.ac.uk>
+
+; Written by Christopher Harrison <ch12@sanger.ac.uk>
+; Copyright (c) 2020 Genome Research Ltd.
+; Licensed under the terms of the GPLv3
 
 #lang racket/base
 
