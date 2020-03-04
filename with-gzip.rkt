@@ -80,3 +80,28 @@
     (lambda ()
       (unless (port-closed? pipe-to) (close-output-port pipe-to))
       (unless (port-closed? pipe-from) (close-input-port pipe-from)))))
+
+
+(module+ test
+  (require racket/port
+           rackunit)
+
+  (define test-strings '("The quick brown fox jumps over the lazy dog."
+                         "How vexingly quick daft zebras jump!"
+                         "Pack my box with five dozen liquor jugs."))
+
+  (define (round-trip str)
+    (with-output-to-string
+      (lambda ()
+        (with-input-from-bytes
+          ; gzip'd byte string
+          (with-output-to-bytes
+            (lambda () (with-gzip (lambda () (display str)))))
+
+          ; gunzip input
+          (lambda ()
+            (with-gunzip
+              (lambda () (display (port->string)))))))))
+
+  (for-each (lambda (str) (check-equal? (round-trip str) str))
+            test-strings))
