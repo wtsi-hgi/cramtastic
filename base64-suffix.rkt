@@ -126,16 +126,16 @@
 (module+ test
   (require rackunit)
 
-  (check-equal? 50 (string-length (random-string 50)))
+  (check-equal? (string-length (random-string 50)) 50)
   (check-regexp-match #px"^[[:alnum:]]{10}$" (random-string 10))
 
-  (check-equal? "day" (common-suffix "Monday" "Tuesday" "Wednesday"))
-  (check-equal? ""    (common-suffix "January" "February" "March"))
+  (check-equal? (common-suffix "Monday" "Tuesday" "Wednesday") "day")
+  (check-equal? (common-suffix "January" "February" "March")   "")
 
   (let-values (((bam1  bam2  bam3)  (base64-suffices ".bam"))
                ((cram1 cram2 cram3) (base64-suffices ".cram"))
                ((test1 test2 test3) (base64-suffices "test")))
 
-    (check-equal? (set "uYmFt"  "5iYW0="   "LmJhbQ==")  (set bam1  bam2  bam3))
-    (check-equal? (set "5jcmFt" "LmNyYW0=" "uY3JhbQ==") (set cram1 cram2 cram3))
-    (check-equal? (set "0ZXN0"  "Rlc3Q="   "dGVzdA==")  (set test1 test2 test3))))
+    (check-equal? (set bam1  bam2  bam3)  (set "uYmFt"  "5iYW0="   "LmJhbQ=="))
+    (check-equal? (set cram1 cram2 cram3) (set "5jcmFt" "LmNyYW0=" "uY3JhbQ=="))
+    (check-equal? (set test1 test2 test3) (set "0ZXN0"  "Rlc3Q="   "dGVzdA=="))))
