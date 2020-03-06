@@ -29,11 +29,17 @@
 ;; Wrapper for `getent group $@ 2>/dev/null`
 ; TODO Return a list of structs rather than raw strings
 (define (getent-group . groups)
-  (string-split
-    (parameterize ((current-error-port (open-output-nowhere)))
-      (with-output-to-string
-        (lambda () (apply getent "group" groups))))
-    "\n"))
+  (define output (open-output-string))
+
+  ; TODO Use getent's documented exit codes
+  (unless
+    (parameterize ((current-output-port output)
+                   (current-error-port  (open-output-nowhere)))
+      (apply getent "group" groups))
+
+    (error "getent call failed"))
+
+  (string-split (get-output-string output) "\n"))
 
 
 ;; Map group name to GID
