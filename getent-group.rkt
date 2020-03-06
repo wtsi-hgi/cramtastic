@@ -9,14 +9,17 @@
 (require racket/contract
          racket/function
          racket/list
+         racket/match
          racket/port
          racket/string
          racket/system)
 
 
-(provide/contract
-  (getent-group (-> string? ... (listof string?)))
-  (group->gid   (-> string? exact-nonnegative-integer?)))
+(provide
+  (struct-out group)
+  (contract-out
+    (getent-group (-> string? ... (listof group?)))
+    (group->gid   (-> string? exact-nonnegative-integer?))))
 
 
 ;; getent system call
@@ -26,8 +29,11 @@
     (curry system* /path/to/getent)))
 
 
+;; Group database record
+(struct group (name password gid users))
+
+
 ;; Wrapper for `getent group $@ 2>/dev/null`
-; TODO Return a list of structs rather than raw strings
 (define (getent-group . groups)
   (define output (open-output-string))
 
@@ -39,13 +45,18 @@
 
     (error "getent call failed"))
 
-  (string-split (get-output-string output) "\n"))
+  ; Map each string record into group structure
+  (map
+    (lambda (record)
+      (match (string-split record ":")
+        ((list name password gid users) (group name
+                                               password
+                                               (string->number gid)
+                                               (string-split users ",")))))
+
+    (string-split (get-output-string output) "\n")))
 
 
 ;; Map group name to GID
 (define (group->gid group)
-  (define getent-record (getent-group group))
-  (when (zero? (length getent-record))
-    (error "Cannot map to group ID: Group record not found"))
-
-  (string->number (third (string-split (first getent-record) ":"))))
+  (group-gid (first (getent-group group))))
