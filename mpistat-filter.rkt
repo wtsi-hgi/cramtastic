@@ -135,7 +135,7 @@
 
   ; Predicate on GID match
   (define gid-match?
-    (let ((gid (number->string (group->gid group))))
+    (let ((gid (number->string (group->gid group-name))))
       (curry equal? gid)))
 
   ; Predicate on suffix match
