@@ -147,8 +147,8 @@
   ; Compress when not outputting to a TTY, otherwise a no-op
   (define with-appropriate-output
     (cond
-      ((terminal-port? (current-output-port)) with-gzip)
-      (else                                   (curryr apply empty))))
+      ((terminal-port? (current-output-port)) (curryr apply empty))
+      (else                                   with-gzip)))
 
   ; Stream through the input and filter
   (parameterize ((current-input-port mpistat-input))
