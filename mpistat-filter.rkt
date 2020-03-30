@@ -133,6 +133,10 @@
       ((vector file group suffix _ ...)
        (values (open-input-file file #:mode 'binary) group suffix))))
 
+  ; Get gzip buffer size from environment (defaults to 64KiB)
+  (define gzip-buffer
+    (string->number (or (getenv "GZIP_BUFFER") "65536")))
+
   ; Predicate on GID match
   (define gid-match?
     (let ((gid (number->string (group->gid group-name))))
@@ -147,14 +151,16 @@
   ; Compress when not outputting to a TTY, otherwise a no-op
   (define with-appropriate-output
     (cond
-      ((terminal-port? (current-output-port)) (curryr apply empty))
-      (else                                   with-gzip)))
+      ((terminal-port? (current-output-port))
+        (curryr apply empty))
+      (else
+        (curry with-gzip #:buffer-size gzip-buffer))))
 
   ; Stream through the input and filter
   (parameterize ((current-input-port mpistat-input))
     (with-appropriate-output
       (lambda ()
-        (with-gunzip
+        (with-gunzip #:buffer-size gzip-buffer
           (lambda () (mpistat-filter #:gid         gid-match?
                                      #:path/base64 suffix-match?))))))
 
