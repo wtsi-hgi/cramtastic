@@ -16,9 +16,6 @@
          net/base64)
 
 
-; mpistat-filter predicate contract
-(define predicate/c (-> string? boolean?))
-
 (provide/contract
   (mpistat-filter (-> #:path        (or/c void? predicate/c)
                       #:path/base64 (or/c void? predicate/c)
