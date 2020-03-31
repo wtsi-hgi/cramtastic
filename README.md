@@ -1,6 +1,7 @@
 # Wham BAM, Thank You CRAM!
 
 ![Build Status](https://travis-ci.org/wtsi-hgi/wham-bam-thank-you-cram.svg?branch=master)
+[![Coverage Status](https://codecov.io/github/wtsi-hgi/wham-bam-thank-you-cram/coverage.svg?branch=master)](https://codecov.io/github/wtsi-hgi/wham-bam-thank-you-cram?branch=master)
 
 ## Usage
 

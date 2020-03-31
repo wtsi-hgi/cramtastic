@@ -1,7 +1,11 @@
 # Travis CI Setup
-# Adapted from https://github.com/greghendershott/travis-racket
+
+# Adapted from:
+# * https://github.com/greghendershott/travis-racket
+# * https://github.com/codecov/codecov-racket
 
 language: c
+sudo: false
 
 env:
   global:
@@ -15,3 +19,7 @@ install:
 
 script:
   - raco test -x .
+
+after_success:
+  - raco pkg install --deps search-auto cover cover-codecov
+  - raco cover -f codecov -d $TRAVIS_BUILD_DIR/coverage .
