@@ -130,9 +130,9 @@
       ((vector file group suffix _ ...)
        (values (open-input-file file #:mode 'binary) group suffix))))
 
-  ; Get gzip buffer size from environment (defaults to 64KiB)
+  ; Get gzip buffer size from environment (defaults to 16KiB)
   (define gzip-buffer
-    (string->number (or (getenv "GZIP_BUFFER") "65536")))
+    (string->number (or (getenv "GZIP_BUFFER") "16384")))
 
   ; Predicate on GID match
   (define gid-match?
