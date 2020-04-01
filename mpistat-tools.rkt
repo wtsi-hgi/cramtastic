@@ -1,12 +1,12 @@
 #!/usr/bin/env racket
 
-;;; Filter mpistat data on the current input port
+;;; Filter and decode mpistat data
 
 ; Written by Christopher Harrison <ch12@sanger.ac.uk>
 ; Copyright (c) 2020 Genome Research Ltd.
 ; Licensed under the terms of the GPLv3
 
-#lang racket/base
+#lang at-exp racket/base
 
 (require racket/contract
          racket/function
@@ -165,5 +165,41 @@
 
 
 (module+ test
-  (require rackunit)
-  #;TODO )
+  (require racket/format
+           racket/port
+           rackunit)
+
+  (define mpistat-build
+    (let ((tab-delimit      (curryr string-replace #px"[[:blank:]]+" "\t"))
+          (trailing-newline (curryr string-append "\n")))
+      (compose trailing-newline tab-delimit ~a)))
+
+  (define path ; i.e., base64-encode/string
+    (compose bytes->string/utf-8 (curryr base64-encode #"") string->bytes/utf-8))
+
+  (define mpistats @mpistat-build{
+    @; Base64-Encoded Path     Size  UID  GID  atime  mtime  ctime  Type  inode ID  # Hardlinks  Device ID
+    @path{/path/to/file}        123  123  123      0      0      0  f     1                   1  1
+    @path{/path/to/foo.bam}     123  123  123      0      0      0  f     2                   1  1
+    })
+
+  ; Wrapper around mpistat-filter that takes an optional positional
+  ; argument of a string containing mpistat data (defaults to the test
+  ; data defined above) and optional keyword arguments which will be
+  ; passed as the filter predicates to mpistat-filter. The filtered
+  ; output will be returned as a string
+  (define mpistat-filter->string
+    (make-keyword-procedure
+      (lambda (filter-kws filters . positional)
+        (define input-string
+          (cond ((empty? positional) mpistats)
+                (else                (first positional))))
+
+        (with-input-from-string input-string
+          (lambda () (with-output-to-string
+            (lambda ()
+              (keyword-apply mpistat-filter filter-kws filters '()))))))))
+
+  ; TODO More tests
+  (check-equal? (mpistat-filter->string) mpistats)
+  (check-equal? (mpistat-filter->string #:uid (lambda (_) #f)) ""))
