@@ -13,12 +13,12 @@
 
 
 (provide/contract
-  (path-suffix-match? (-> string? predicate/c))
-  (group-match?       (-> string? predicate/c)))
+  (path/base64-suffix-match? (-> string? predicate/c))
+  (group-match?              (-> string? predicate/c)))
 
 
-;; Predicate on path suffix match (base64 encoded, as an optimisation)
-(define (path-suffix-match? suffix)
+;; Predicate on path suffix match
+(define (path/base64-suffix-match? suffix)
   (let*-values (((sfx1 sfx2 sfx3) (base64-suffices suffix))
                 ((suffix-regexp)  (regexp (format "(~a|~a|~a)$" sfx1 sfx2 sfx3))))
     (curry regexp-match? suffix-regexp)))

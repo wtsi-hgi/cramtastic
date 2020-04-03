@@ -142,7 +142,7 @@
       (lambda ()
         (with-gunzip #:buffer-size gzip-buffer
           (lambda () (mpistat-filter #:gid         (group-match? group-name)
-                                     #:path/base64 (path-suffix-match? suffix)))))))
+                                     #:path/base64 (path/base64-suffix-match? suffix)))))))
 
   (close-input-port mpistat-input))
 
