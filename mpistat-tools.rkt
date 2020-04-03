@@ -103,7 +103,7 @@
 
 
 (module+ main
-  (require "filters.rkt"
+  (require "filter-predicates.rkt"
            "with-gzip.rkt")
 
   ; Get input port, group name and suffix from command line

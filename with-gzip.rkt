@@ -28,7 +28,7 @@
 ; IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ; POSSIBILITY OF SUCH DAMAGE.
 
-; Modifications by Christopher Harrison <ch12@sanger.ac.uk>
+; [Trivial] modifications by Christopher Harrison <ch12@sanger.ac.uk>
 ; Copyright (c) 2020 Genome Research Ltd.
 ; Licensed under the terms of the GPLv3
 
