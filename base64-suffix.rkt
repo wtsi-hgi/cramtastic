@@ -17,9 +17,19 @@
 
 
 (provide/contract
+  (base64-decode/string (-> string? string?))
+  (base64-encode/string (-> string? string?))
   (base64-suffices (->* (string?)
                         (exact-positive-integer?)
                         (values string? string? string?))))
+
+
+(define (string->bytes->string fn)
+  (compose bytes->string/utf-8 fn string->bytes/utf-8))
+
+;; Base64 decode/encode on strings, rather than bytes
+(define base64-decode/string (string->bytes->string base64-decode))
+(define base64-encode/string (string->bytes->string (curryr base64-encode #"")))
 
 
 ;; Generate a random string of a given length, where each character
@@ -73,11 +83,6 @@
 
 ;; Find the common base64 suffices of the given plaintext suffix
 (define (base64-suffices plaintext-suffix (trials 10))
-  ; base64 encode for strings
-  ; FIXME Stick with native bytes?
-  (define base64-encode/string (compose bytes->string/utf-8
-                                        (curryr base64-encode #"")
-                                        string->bytes/utf-8))
   (define sample-results
     ; base64 padding has three possible alignments per trial
     (let* ((alignments 3)
@@ -125,6 +130,9 @@
 
 (module+ test
   (require rackunit)
+
+  (check-equal? (base64-decode/string "SGVsbG8=") "Hello")
+  (check-equal? (base64-encode/string "Hello") "SGVsbG8=")
 
   (check-equal? (string-length (random-string 50)) 50)
   (check-regexp-match #px"^[[:alnum:]]{10}$" (random-string 10))

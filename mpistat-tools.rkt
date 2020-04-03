@@ -13,7 +13,8 @@
          racket/list
          racket/match
          racket/string
-         net/base64)
+         net/base64
+         "base64-suffix.rkt")
 
 
 (provide/contract
@@ -30,11 +31,6 @@
                       #:hardlinks   (or/c void? predicate/c)
                       #:device-id   (or/c void? predicate/c)
                       void?)))
-
-
-;; Base64 decode a string
-(define base64-decode/string
-  (compose bytes->string/utf-8 base64-decode string->bytes/utf-8))
 
 
 ;; Filter the mpistat records, taken from the current input port, by the
@@ -109,7 +105,6 @@
 
 (module+ main
   (require "getent-group.rkt"
-           "base64-suffix.rkt"
            "with-gzip.rkt")
 
   ; Get input port, group name and suffix from command line
@@ -172,17 +167,14 @@
   (define trailing-newline (curryr string-append "\n"))
 
   (define mpistat-build
-    (let ((tab-delimit      (curryr string-replace #px"[[:blank:]]+" "\t")))
+    (let ((tab-delimit (curryr string-replace #px"[[:blank:]]+" "\t")))
       (compose trailing-newline tab-delimit ~a)))
 
-  (define path ; i.e., base64-encode/string
-    (compose bytes->string/utf-8 (curryr base64-encode #"") string->bytes/utf-8))
-
   (define mpistats @mpistat-build{
-    @; Base64-Encoded Path     Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
-    @path{/path/to/file}        123  456  789      0      1      2  f     1                   1  1
-    @path{/path/to/foo.bam}     456  789  123      1      2      0  l     2                   1  2
-    @path{/path/to/no-where}    789  123  456      2      0      1  f     3                   2  1})
+    @; Base64-Encoded Path                   Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
+    @base64-encode/string{/path/to/file}      123  456  789      0      1      2  f     1                   1  1
+    @base64-encode/string{/path/to/foo.bam}   456  789  123      1      2      0  l     2                   1  2
+    @base64-encode/string{/path/to/no-where}  789  123  456      2      0      1  f     3                   2  1})
 
   ; The above, linewise
   (define mpistats-lines (map trailing-newline (string-split mpistats "\n")))
@@ -217,13 +209,13 @@
 
   ; Encoded path
   (check-equal?
-    (test-filter #:path/base64 (lambda (x) (equal? x @path{/path/to/foo.bam})))
+    (test-filter #:path/base64 (lambda (x) (equal? x @base64-encode/string{/path/to/foo.bam})))
     (second mpistats-lines))
 
   ; Plain and encoded path
   (check-equal?
     (test-filter #:path (lambda (x) (equal? x "/path/to/file"))
-                 #:path/base64 (lambda (x) (equal? x @path{/path/to/file})))
+                 #:path/base64 (lambda (x) (equal? x @base64-encode/string{/path/to/file})))
     (first mpistats-lines))
 
   ; Size
