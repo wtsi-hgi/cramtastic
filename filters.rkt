@@ -28,3 +28,13 @@
 (define (group-match? group-name)
   (let ((gid (number->string (group->gid group-name))))
     (curry equal? gid)))
+
+
+(module+ test
+  (require rackunit)
+
+  (check-true ((path/base64-suffix-match? ".bam")
+               (base64-encode/string "something.bam")))
+
+  (check-false ((path/base64-suffix-match? ".bam")
+                (base64-encode/string "foo"))))
