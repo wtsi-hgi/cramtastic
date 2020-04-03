@@ -13,7 +13,6 @@
          racket/list
          racket/match
          racket/string
-         net/base64
          "base64-suffix.rkt")
 
 
@@ -104,7 +103,7 @@
 
 
 (module+ main
-  (require "getent-group.rkt"
+  (require "filters.rkt"
            "with-gzip.rkt")
 
   ; Get input port, group name and suffix from command line
@@ -129,17 +128,6 @@
   (define gzip-buffer
     (string->number (or (getenv "GZIP_BUFFER") "16384")))
 
-  ; Predicate on GID match
-  (define gid-match?
-    (let ((gid (number->string (group->gid group-name))))
-      (curry equal? gid)))
-
-  ; Predicate on suffix match
-  (define suffix-match?
-    (let*-values (((sfx1 sfx2 sfx3) (base64-suffices suffix))
-                  ((suffix-regexp)  (regexp (format "(~a|~a|~a)$" sfx1 sfx2 sfx3))))
-      (curry regexp-match? suffix-regexp)))
-
   ; Compress when not outputting to a TTY, otherwise a no-op
   (define with-appropriate-output
     (cond
@@ -153,8 +141,8 @@
     (with-appropriate-output
       (lambda ()
         (with-gunzip #:buffer-size gzip-buffer
-          (lambda () (mpistat-filter #:gid         gid-match?
-                                     #:path/base64 suffix-match?))))))
+          (lambda () (mpistat-filter #:gid         (group-match? group-name)
+                                     #:path/base64 (path-suffix-match? suffix)))))))
 
   (close-input-port mpistat-input))
 
