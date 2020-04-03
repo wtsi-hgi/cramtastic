@@ -37,4 +37,6 @@
                (base64-encode/string "something.bam")))
 
   (check-false ((path/base64-suffix-match? ".bam")
-                (base64-encode/string "foo"))))
+                (base64-encode/string "foo")))
+
+  (check-true ((group-match? "root") "0")))

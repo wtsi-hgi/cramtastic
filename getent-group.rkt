@@ -60,3 +60,15 @@
 ;; Map group name to GID
 (define (group->gid group)
   (group-gid (first (getent-group group))))
+
+
+(module+ test
+  (require rackunit)
+
+  (let* ((root-search (getent-group "root"))
+         (root-group  (first root-search)))
+    (check-equal? (length root-search) 1)
+    (check-equal? (group-name root-group) "root")
+    (check-equal? (group-gid  root-group) 0))
+
+  (check-equal? (group->gid "root") 0))
