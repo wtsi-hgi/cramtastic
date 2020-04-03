@@ -48,7 +48,7 @@
   ; Map each string record into group structure
   (map
     (lambda (record)
-      (match (string-split record ":")
+      (match (string-split record ":" #:trim? #f)
         ((list name password gid users) (group name
                                                password
                                                (string->number gid)
