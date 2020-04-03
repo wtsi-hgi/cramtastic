@@ -152,10 +152,9 @@
            racket/port
            rackunit)
 
-  (define trailing-newline (curryr string-append "\n"))
-
   (define mpistat-build
-    (let ((tab-delimit (curryr string-replace #px"[[:blank:]]+" "\t")))
+    (let ((tab-delimit      (curryr string-replace #px"[[:blank:]]+" "\t"))
+          (trailing-newline (curryr string-append "\n")))
       (compose trailing-newline tab-delimit ~a)))
 
   (define mpistats @mpistat-build{
@@ -165,7 +164,7 @@
     @base64-encode/string{/path/to/no-where}  789  123  456      2      0      1  f     3                   2  1})
 
   ; The above, linewise
-  (define mpistats-lines (map trailing-newline (string-split mpistats "\n")))
+  (define mpistats-lines (string-split mpistats #px"(?<=\n)"))
 
   ; Wrapper around mpistat-filter that takes an optional positional
   ; argument of a string containing mpistat data (defaults to the test
