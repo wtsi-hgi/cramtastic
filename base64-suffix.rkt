@@ -12,6 +12,7 @@
          racket/function
          racket/list
          racket/set
+         racket/stream
          racket/vector
          net/base64)
 
@@ -35,26 +36,17 @@
 ;; Generate a random string of a given length, where each character
 ;; matches the optional regular expression
 (define (random-string n (pattern #px"[[:alnum:]]"))
-  ; Random 8-bit ASCII character
-  (define (random-char) (integer->char (random 0 256)))
+  ; Random 8-bit ASCII character stream
+  (define (random-char) (string (integer->char (random 0 256))))
+  (define (random-char-stream) (stream-cons (random-char)
+                                            (random-char-stream)))
 
   ; Check character matches pattern
-  (define (char-match? char) (regexp-match? pattern (string char)))
+  (define char-match? (curry regexp-match? pattern))
 
-  ; Recursively build list of n matching characters
-  (define (builder (built '()))
-    (cond
-      ((equal? n (length built)) built)
-      (else
-        (define next-char (random-char))
-        (define new-build
-          (cond
-            ((char-match? next-char) (cons next-char built))
-            (else                    built)))
-
-        (builder new-build))))
-
-  (list->string (builder)))
+  ; Take the first n characters that match the pattern
+  (stream-fold string-append ""
+               (stream-take (stream-filter char-match? (random-char-stream)) n)))
 
 
 ;; Find the common suffix of the given strings
