@@ -49,17 +49,16 @@
 
     ; Normalise the path predicate
     (define path/universal
-      (cond
-        ((and (void? path/base64)      (void? path))      (void))
-        ((and (procedure? path/base64) (void? path))      path/base64)
-        ((and (void? path/base64)      (procedure? path)) (compose path base64-decode/string))
+      (match* (path/base64 path)
+        (((? void?)        (? void?))        (void))
+        (((? procedure? p) (? void?))        p)
+        (((? void?)        (? procedure? p)) (compose p base64-decode/string))
 
         ; If there are predicates for both the encoded and plain path,
         ; then we test the encoded path first as an optimisation
-        ((and (procedure? path/base64) (procedure? path))
+        (((? procedure? p) (? procedure? q))
           (lambda (encoded-path)
-            (and (path/base64                         encoded-path)
-                 ((compose path base64-decode/string) encoded-path))))))
+            (and (p encoded-path) ((compose q base64-decode/string) encoded-path))))))
 
     (define record-filters
       (list path/universal size uid gid atime mtime ctime mode inode-id hardlinks device-id))

@@ -37,10 +37,10 @@
 ;; matches the optional regular expression
 (define (random-string n (pattern #px"[[:alnum:]]"))
   ; Random 8-bit ASCII character stream
+  ; n.b., We convert to string to make matching and appending easier
   (define (random-char) (string (integer->char (random 0 256))))
   (define (random-char-stream) (stream-cons (random-char)
                                             (random-char-stream)))
-
   ; Check character matches pattern
   (define char-match? (curry regexp-match? pattern))
 
