@@ -182,13 +182,14 @@
     (make-keyword-procedure
       (lambda (filter-kws filters . positional)
         (define input-string
-          (cond ((empty? positional) mpistats)
-                (else                (first positional))))
+          (match positional
+            (empty              mpistats)
+            ((list input _ ...) input)))
 
         (with-input-from-string input-string
           (lambda () (with-output-to-string
             (lambda ()
-              (keyword-apply mpistat-filter filter-kws filters '()))))))))
+              (keyword-apply mpistat-filter filter-kws filters empty))))))))
 
   ; All match
   (check-equal? (test-filter) mpistats)
