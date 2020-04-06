@@ -12,6 +12,7 @@
          racket/function
          racket/list
          racket/match
+         racket/stream
          racket/string
          "base64-suffix.rkt")
 
@@ -30,6 +31,14 @@
                       #:hardlinks   (or/c void? predicate/c)
                       #:device-id   (or/c void? predicate/c)
                       void?)))
+
+
+;; Read an input port linewise, in the given mode, into a stream
+(define (port->stream (in (current-input-port)) (mode 'linefeed))
+  (define next-line (read-line in mode))
+  (match next-line
+    ((? eof-object?) empty-stream)
+    (_               (stream-cons next-line (port->stream in mode)))))
 
 
 ;; Filter the mpistat records, taken from the current input port, by the
@@ -76,15 +85,9 @@
       (define fields (string-split mpistat-record "\t"))
       (andmap field-match? (map cons fields record-filters)))
 
-    ; Iterate through input, line-by-line
-    (define (iterate-through input-port)
-      (define mpistat-record (read-line input-port))
-
-      (unless (eof-object? mpistat-record)
-        (when (record-match? mpistat-record) (displayln mpistat-record))
-        (iterate-through input-port)))
-
-    (iterate-through (current-input-port)))
+    ; Output matching lines
+    (stream-for-each displayln
+      (stream-filter record-match? (port->stream))))
 
 
 ;; TODO mpistat decoding
