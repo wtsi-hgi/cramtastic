@@ -14,23 +14,29 @@
          racket/match
          racket/stream
          racket/string
-         "base64-suffix.rkt")
+         "base64-suffix.rkt"
+         "getent-group.rkt")
 
 
-(provide/contract
-  (mpistat-filter (-> #:path        (or/c void? predicate/c)
-                      #:path/base64 (or/c void? predicate/c)
-                      #:size        (or/c void? predicate/c)
-                      #:uid         (or/c void? predicate/c)
-                      #:gid         (or/c void? predicate/c)
-                      #:atime       (or/c void? predicate/c)
-                      #:mtime       (or/c void? predicate/c)
-                      #:ctime       (or/c void? predicate/c)
-                      #:mode        (or/c void? predicate/c)
-                      #:inode-id    (or/c void? predicate/c)
-                      #:hardlinks   (or/c void? predicate/c)
-                      #:device-id   (or/c void? predicate/c)
-                      void?)))
+(provide
+  (struct-out mpistat)
+
+  (contract-out
+    (mpistat-filter (-> #:path        (or/c void? predicate/c)
+                        #:path/base64 (or/c void? predicate/c)
+                        #:size        (or/c void? predicate/c)
+                        #:uid         (or/c void? predicate/c)
+                        #:gid         (or/c void? predicate/c)
+                        #:atime       (or/c void? predicate/c)
+                        #:mtime       (or/c void? predicate/c)
+                        #:ctime       (or/c void? predicate/c)
+                        #:mode        (or/c void? predicate/c)
+                        #:inode-id    (or/c void? predicate/c)
+                        #:hardlinks   (or/c void? predicate/c)
+                        #:device-id   (or/c void? predicate/c)
+                        void?))
+
+    (mpistat-decode (-> (stream/c mpistat)))))
 
 
 ;; Read an input port linewise, in the given mode, into a stream
@@ -90,18 +96,52 @@
       (stream-filter record-match? (port->stream))))
 
 
-;; TODO mpistat decoding
-;; Tag by filetype
-(define (type-tag filetype)
-  (match filetype
-    ("f"  'file)
-    ("d"  'directory)
-    ("l"  'symlink)
-    ("s"  'socket)
-    ("b"  'block-device)
-    ("c"  'character-device)
-    ("F"  'named-pipe)
-    ("X"  'other)))
+;; mpistat record structure
+(struct mpistat
+  (path size uid gid atime mtime ctime mode inode-id hardlinks device-id))
+
+;; Decode the mpistat records, taken from the current input port, into
+;; a stream of mpistat structures
+(define (mpistat-decode)
+  ; Decode path
+  (define decode-path (compose string->path base64-decode/string))
+
+  ; Decode UID
+  ; TODO Extend getent interface to include the passwd database
+  (define decode-uid string->number)
+
+  ; Decode GID
+  (define decode-gid (compose first getent-group))
+
+  ; Decode Unix time
+  (define decode-time (compose (curryr seconds->date #f) string->number))
+
+  ; Decode mode
+  (define (decode-mode mode) (match mode ("f"  'file)
+                                         ("d"  'directory)
+                                         ("l"  'symlink)
+                                         ("s"  'socket)
+                                         ("b"  'block-device)
+                                         ("c"  'character-device)
+                                         ("F"  'named-pipe)
+                                         ("X"  'other)))
+  (define record-decoders
+    (list decode-path string->number decode-uid decode-gid decode-time decode-time decode-time decode-mode string->number string->number string->number))
+
+  ; Decode the data-decoder tuple
+  (define (field-decode data/decoder)
+    (match-define (cons data decoder) data/decoder)
+    (decoder data))
+
+  (define (record-decode mpistat-record)
+    ; Zip the tab-delimited record with the list of decoders and execute
+    ; the decoding. This gives us a list of decoded fields, which are
+    ; then applied to the mpistat structure.
+    (apply mpistat
+      (map field-decode
+           (map cons (string-split mpistat-record "\t") record-decoders))))
+
+  (stream-map record-decode (port->stream)))
 
 
 (module+ main
