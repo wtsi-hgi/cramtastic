@@ -36,7 +36,7 @@
                         #:device-id   (or/c void? predicate/c)
                         void?))
 
-    (mpistat-decode (-> (stream/c mpistat)))))
+    (mpistat-decode (-> (stream/c mpistat?)))))
 
 
 ;; Read an input port linewise, in the given mode, into a stream
