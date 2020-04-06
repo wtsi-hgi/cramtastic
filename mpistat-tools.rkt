@@ -168,6 +168,11 @@
   ; The above, linewise
   (define mpistats-lines (string-split mpistats #px"(?<=\n)"))
 
+  ; Check port->stream works
+  (let ((reconstructed (stream-fold (curryr string-append "\n") ""
+                                    (with-input-from-string mpistats port->stream))))
+    (check-equal? reconstructed mpistats))
+
   ; Wrapper around mpistat-filter that takes an optional positional
   ; argument of a string containing mpistat data (defaults to the test
   ; data defined above) and optional keyword arguments which will be
