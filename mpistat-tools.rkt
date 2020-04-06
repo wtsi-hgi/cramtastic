@@ -308,4 +308,24 @@
     (test-filter #:path (lambda (x) (string-prefix? x "/path/to"))
                  #:device-id (lambda (x) (equal? x "1"))
                  #:hardlinks (lambda (x) (< (string->number x) 2)))
-    (first mpistats-lines)))
+    (first mpistats-lines))
+
+  ; Check decoding
+  (let* ((mpistats-to-decode @mpistat-build{
+                             @; Base64-Encoded Path                   Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
+                             @base64-encode/string{/path/to/file}      123    0    0      0      1      2  f     1                   2  3})
+
+         (decoded-stream     (with-input-from-string mpistats-to-decode mpistat-decode))
+         (decoded            (stream-first decoded-stream)))
+
+    (check-equal?             (mpistat-path      decoded)  (string->path "/path/to/file"))
+    (check-equal?             (mpistat-size      decoded)  123)
+    (check-equal?             (mpistat-uid       decoded)  0)
+    (check-equal? (group-name (mpistat-gid       decoded)) "root")
+    (check-equal?             (mpistat-atime     decoded)  (seconds->date 0 #f))
+    (check-equal?             (mpistat-mtime     decoded)  (seconds->date 1 #f))
+    (check-equal?             (mpistat-ctime     decoded)  (seconds->date 2 #f))
+    (check-equal?             (mpistat-mode      decoded)  'file)
+    (check-equal?             (mpistat-inode-id  decoded)  1)
+    (check-equal?             (mpistat-hardlinks decoded)  2)
+    (check-equal?             (mpistat-device-id decoded)  3)))
