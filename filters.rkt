@@ -14,7 +14,8 @@
 
 (provide/contract
   (path/base64-suffix-match? (-> string? predicate/c))
-  (group-match?              (-> string? predicate/c)))
+  (group-match?              (-> string? predicate/c))
+  (owner-match?              (-> string? predicate/c)))
 
 
 ;; Predicate on path suffix match
@@ -30,6 +31,12 @@
     (curry equal? gid)))
 
 
+;; Predicate on owner match
+(define (owner-match? username)
+  (let ((uid (number->string (user->uid username))))
+    (curry equal? uid)))
+
+
 (module+ test
   (require rackunit)
 
@@ -39,4 +46,6 @@
   (check-false ((path/base64-suffix-match? ".bam")
                 (base64-encode/string "foo")))
 
-  (check-true ((group-match? "root") "0")))
+  (check-true ((group-match? "root") "0"))
+
+  (check-true ((owner-match? "root") "0")))
