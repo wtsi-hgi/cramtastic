@@ -20,12 +20,14 @@
   (struct-out passwd)
 
   (contract-out
-    (getent-group  (-> string? ... (listof group?)))
-    (getent-passwd (-> string? ... (listof passwd?)))
-    (group->gid    (-> string? exact-nonnegative-integer?))
-    (gid->group    (-> exact-nonnegative-integer? string?))
-    (user->uid     (-> string? exact-nonnegative-integer?))
-    (uid->user     (-> exact-nonnegative-integer? string?))))
+    (getent-group    (-> string? ... (listof group?)))
+    (getent-passwd   (-> string? ... (listof passwd?)))
+
+    (group-name->gid (-> string? exact-nonnegative-integer?))
+    (gid->group-name (-> exact-nonnegative-integer? string?))
+
+    (username->uid   (-> string? exact-nonnegative-integer?))
+    (uid->username   (-> exact-nonnegative-integer? string?))))
 
 
 ;; Group database record
@@ -34,9 +36,9 @@
 ;; Passwd database record
 (struct passwd (username password uid gid gecos home shell))
 
-;; Adaptor: Convert raw string input into the appropriate record struct
-;; TODO This only works by virtue of the records having different field
-;; counts for different databases; maybe make this a bit less hacky...
+;; Convert raw string input into the appropriate record struct
+; TODO This only works by virtue of the records having different field
+;      counts for different databases; maybe make this a bit less hacky!
 (define (raw->record raw)
   (match (string-split raw ":" #:trim? #f)
     ((list name password gid users)
@@ -76,11 +78,11 @@
 (define (getent-group . groups) (apply getent "group" groups))
 (define (getent-passwd . users) (apply getent "passwd" users))
 
-(define (group->gid group) (group-gid (first (getent-group group))))
-(define (gid->group gid) (group-name (first (getent-group (number->string gid)))))
+(define group-name->gid (compose group-gid first getent-group))
+(define gid->group-name (compose group-name first getent-group number->string))
 
-(define (user->uid user) (passwd-uid (first (getent-passwd user))))
-(define (uid->user uid) (passwd-username (first (getent-passwd (number->string uid)))))
+(define username->uid (compose passwd-uid first getent-passwd))
+(define uid->username (compose passwd-username first getent-passwd number->string))
 
 
 (module+ test
@@ -98,5 +100,5 @@
     (check-equal? (passwd-username root-user) "root")
     (check-equal? (passwd-uid      root-user) 0))
 
-  (check-equal? (gid->group (group->gid "root")) "root")
-  (check-equal? (uid->user  (user->uid  "root")) "root"))
+  (check-equal? (gid->group-name (group-name->gid "root")) "root")
+  (check-equal? (uid->username   (username->uid  "root")) "root"))

@@ -27,13 +27,13 @@
 
 ;; Predicate on group match
 (define (group-match? group-name)
-  (let ((gid (number->string (group->gid group-name))))
+  (let ((gid (number->string (group-name->gid group-name))))
     (curry equal? gid)))
 
 
 ;; Predicate on owner match
 (define (owner-match? username)
-  (let ((uid (number->string (user->uid username))))
+  (let ((uid (number->string (username->uid username))))
     (curry equal? uid)))
 
 
