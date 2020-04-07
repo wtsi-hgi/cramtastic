@@ -144,7 +144,7 @@
 
 
 (module+ main
-  (require "filter-predicates.rkt"
+  (require "filters.rkt"
            "with-gzip.rkt")
 
   ; Get input port, group name and suffix from command line
