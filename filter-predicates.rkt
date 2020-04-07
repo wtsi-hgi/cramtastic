@@ -9,7 +9,7 @@
 (require racket/contract
          racket/function
          "base64-suffix.rkt"
-         "getent-group.rkt")
+         "getent.rkt")
 
 
 (provide/contract

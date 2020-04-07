@@ -15,7 +15,7 @@
          racket/stream
          racket/string
          "base64-suffix.rkt"
-         "getent-group.rkt")
+         "getent.rkt")
 
 
 (provide
@@ -117,14 +117,14 @@
   (define decode-time (compose (curryr seconds->date #f) string->number))
 
   ; Decode mode
-  (define (decode-mode mode) (match mode ("f"  'file)
-                                         ("d"  'directory)
-                                         ("l"  'symlink)
-                                         ("s"  'socket)
-                                         ("b"  'block-device)
-                                         ("c"  'character-device)
-                                         ("F"  'named-pipe)
-                                         ("X"  'other)))
+  (define (decode-mode mode) (match mode ("f" 'file)
+                                         ("d" 'directory)
+                                         ("l" 'symlink)
+                                         ("s" 'socket)
+                                         ("b" 'block-device)
+                                         ("c" 'character-device)
+                                         ("F" 'named-pipe)
+                                         ("X" 'other)))
   (define record-decoders
     (list decode-path string->number decode-uid decode-gid decode-time decode-time decode-time decode-mode string->number string->number string->number))
 
