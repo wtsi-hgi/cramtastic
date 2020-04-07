@@ -200,10 +200,12 @@
       (compose trailing-newline tab-delimit ~a)))
 
   (define mpistats @mpistat-build{
-    @; Base64-Encoded Path                   Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
-    @base64-encode/string{/path/to/file}      123  456  789      0      1      2  f     1                   1  1
-    @base64-encode/string{/path/to/foo.bam}   456  789  123      1      2      0  l     2                   1  2
-    @base64-encode/string{/path/to/no-where}  789  123  456      2      0      1  f     3                   2  1})
+    @; Base64-Encoded Path                    Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
+    @base64-encode/string{/path/to/file}       123  456  789      0      1      2  f     1                   1  1
+    @base64-encode/string{/path/to/foo.bam}    456  789  123      1      2      0  l     2                   1  2
+    @base64-encode/string{/path/to/no-where}   789  123  456      2      0      1  f     3                   2  1
+    @base64-encode/string{/rooty/mcroot/face}  123    0    0      0      1      2  f     111               222  333
+    @base64-encode/string{/foo/bar}            999    0    0    999    999    999  d     999               999  999})
 
   ; The above, linewise
   (define mpistats-lines (string-split mpistats #px"(?<=\n)"))
@@ -231,6 +233,10 @@
             (lambda ()
               (keyword-apply mpistat-filter filter-kws filters empty))))))))
 
+  ; Wrapper around mpistat-decode that takes input from a string
+  (define (test-decode input-string)
+    (with-input-from-string input-string mpistat-decode))
+
   ; All match
   (check-equal? (test-filter) mpistats)
 
@@ -239,93 +245,99 @@
 
   ; Plaintext path
   (check-equal?
-    (test-filter #:path (lambda (x) (equal? x "/path/to/file")))
+    (test-filter #:path (curry equal? "/path/to/file"))
     (first mpistats-lines))
 
   ; Encoded path
   (check-equal?
-    (test-filter #:path/base64 (lambda (x) (equal? x @base64-encode/string{/path/to/foo.bam})))
+    (test-filter #:path/base64 (curry equal? @base64-encode/string{/path/to/foo.bam}))
     (second mpistats-lines))
 
   ; Plain and encoded path
   (check-equal?
-    (test-filter #:path (lambda (x) (equal? x "/path/to/file"))
-                 #:path/base64 (lambda (x) (equal? x @base64-encode/string{/path/to/file})))
+    (test-filter #:path (curry equal? "/path/to/file")
+                 #:path/base64 (curry equal? @base64-encode/string{/path/to/file}))
     (first mpistats-lines))
 
   ; Size
   (check-equal?
-    (test-filter #:size (lambda (x) (equal? x "789")))
+    (test-filter #:size (curry equal? "789"))
     (third mpistats-lines))
 
   ; UID
   (check-equal?
-    (test-filter #:uid (lambda (x) (equal? x "789")))
+    (test-filter #:uid (curry equal? "789"))
     (second mpistats-lines))
 
   ; GID
   (check-equal?
-    (test-filter #:gid (lambda (x) (equal? x "789")))
+    (test-filter #:gid (curry equal? "789"))
     (first mpistats-lines))
 
   ; atime
   (check-equal?
-    (test-filter #:atime (lambda (x) (> (string->number x) 1)))
+    (test-filter #:atime (curry equal? "2"))
     (third mpistats-lines))
 
   ; mtime
   (check-equal?
-    (test-filter #:mtime (lambda (x) (equal? x "2")))
+    (test-filter #:mtime (curry equal? "2"))
     (second mpistats-lines))
 
   ; ctime
   (check-equal?
-    (test-filter #:ctime (lambda (x) (zero? (string->number x))))
+    (test-filter #:ctime (compose zero? string->number))
     (second mpistats-lines))
 
   ; Mode
   (check-equal?
-    (test-filter #:mode (lambda (x) (equal? x "l")))
+    (test-filter #:mode (curry equal? "l"))
     (second mpistats-lines))
 
   ; inode ID
   (check-equal?
-    (test-filter #:inode-id (lambda (x) (equal? x "1")))
+    (test-filter #:inode-id (curry equal? "1"))
     (first mpistats-lines))
 
   ; Hardlinks (return multiple)
   (check-equal?
-    (test-filter #:hardlinks (lambda (x) (equal? x "1")))
+    (test-filter #:hardlinks (curry equal? "1"))
     (string-join (list (first mpistats-lines) (second mpistats-lines)) ""))
 
   ; Device ID (return multiple)
   (check-equal?
-    (test-filter #:device-id (lambda (x) (equal? x "1")))
+    (test-filter #:device-id (curry equal? "1"))
     (string-join (list (first mpistats-lines) (third mpistats-lines)) ""))
 
   ; Combined/non-trivial
   (check-equal?
-    (test-filter #:path (lambda (x) (string-prefix? x "/path/to"))
-                 #:device-id (lambda (x) (equal? x "1"))
+    (test-filter #:path (curryr string-prefix? "/path/to")
+                 #:device-id (curry equal? "1")
                  #:hardlinks (lambda (x) (< (string->number x) 2)))
     (first mpistats-lines))
 
   ; Check decoding
-  (let* ((mpistats-to-decode @mpistat-build{
-                             @; Base64-Encoded Path                   Size  UID  GID  atime  mtime  ctime  Mode  inode ID  # Hardlinks  Device ID
-                             @base64-encode/string{/path/to/file}      123    0    0      0      1      2  f     1                   2  3})
+  ; n.b., We need to limit ourselves to root:root, because that's the
+  ; only user and group we can guarantee
+  (define decoded-stream
+    (let ((root? (curry equal? "0")))
+      (test-decode (test-filter #:uid root? #:gid root?))))
 
-         (decoded-stream     (with-input-from-string mpistats-to-decode mpistat-decode))
-         (decoded            (stream-first decoded-stream)))
+  (check-equal? (stream-length decoded-stream) 2)
 
-    (check-equal?             (mpistat-path      decoded)  (string->path "/path/to/file"))
-    (check-equal?             (mpistat-size      decoded)  123)
-    (check-equal?             (mpistat-uid       decoded)  0)
-    (check-equal? (group-name (mpistat-gid       decoded)) "root")
-    (check-equal?             (mpistat-atime     decoded)  (seconds->date 0 #f))
-    (check-equal?             (mpistat-mtime     decoded)  (seconds->date 1 #f))
-    (check-equal?             (mpistat-ctime     decoded)  (seconds->date 2 #f))
-    (check-equal?             (mpistat-mode      decoded)  'file)
-    (check-equal?             (mpistat-inode-id  decoded)  1)
-    (check-equal?             (mpistat-hardlinks decoded)  2)
-    (check-equal?             (mpistat-device-id decoded)  3)))
+  (let ((head (stream-first decoded-stream)))
+    (check-equal?             (mpistat-path      head)  (string->path "/rooty/mcroot/face"))
+    (check-equal?             (mpistat-size      head)  123)
+    (check-equal?             (mpistat-uid       head)  0)
+    (check-equal? (group-name (mpistat-gid       head)) "root")
+    (check-equal?             (mpistat-atime     head)  (seconds->date 0 #f))
+    (check-equal?             (mpistat-mtime     head)  (seconds->date 1 #f))
+    (check-equal?             (mpistat-ctime     head)  (seconds->date 2 #f))
+    (check-equal?             (mpistat-mode      head)  'file)
+    (check-equal?             (mpistat-inode-id  head)  111)
+    (check-equal?             (mpistat-hardlinks head)  222)
+    (check-equal?             (mpistat-device-id head)  333))
+
+  (check-equal?
+    (stream->list (stream-map mpistat-mode decoded-stream))
+    '(file directory)))
