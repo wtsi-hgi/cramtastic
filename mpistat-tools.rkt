@@ -107,10 +107,10 @@
   (define decode-path (compose string->path base64-decode/string))
 
   ; Decode UID
-  (define decode-uid (compose first getent-passwd))
+  (define decode-uid (compose uid->user string->number))
 
   ; Decode GID
-  (define decode-gid (compose first getent-group))
+  (define decode-gid (compose gid->group string->number))
 
   ; Decode Unix time
   (define decode-time (compose (curryr seconds->date #f) string->number))
@@ -325,17 +325,17 @@
   (check-equal? (stream-length decoded-stream) 2)
 
   (let ((head (stream-first decoded-stream)))
-    (check-equal?                  (mpistat-path      head)  (string->path "/rooty/mcroot/face"))
-    (check-equal?                  (mpistat-size      head)  123)
-    (check-equal? (passwd-username (mpistat-uid       head)) "root")
-    (check-equal? (group-name      (mpistat-gid       head)) "root")
-    (check-equal?                  (mpistat-atime     head)  (seconds->date 0 #f))
-    (check-equal?                  (mpistat-mtime     head)  (seconds->date 1 #f))
-    (check-equal?                  (mpistat-ctime     head)  (seconds->date 2 #f))
-    (check-equal?                  (mpistat-mode      head)  'file)
-    (check-equal?                  (mpistat-inode-id  head)  111)
-    (check-equal?                  (mpistat-hardlinks head)  222)
-    (check-equal?                  (mpistat-device-id head)  333))
+    (check-equal?                   (mpistat-path      head)  (string->path "/rooty/mcroot/face"))
+    (check-equal?                   (mpistat-size      head)  123)
+    (check-equal? (user-username    (mpistat-uid       head)) "root")
+    (check-equal? (group-group-name (mpistat-gid       head)) "root")
+    (check-equal?                   (mpistat-atime     head)  (seconds->date 0 #f))
+    (check-equal?                   (mpistat-mtime     head)  (seconds->date 1 #f))
+    (check-equal?                   (mpistat-ctime     head)  (seconds->date 2 #f))
+    (check-equal?                   (mpistat-mode      head)  'file)
+    (check-equal?                   (mpistat-inode-id  head)  111)
+    (check-equal?                   (mpistat-hardlinks head)  222)
+    (check-equal?                   (mpistat-device-id head)  333))
 
   (check-equal?
     (stream->list (stream-map mpistat-mode decoded-stream))
