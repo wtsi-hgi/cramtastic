@@ -28,3 +28,11 @@ Experimentally determine the minimal base64 suffix triplet for the given
 plaintext suffix (defaults to `.bam`). By default, 10 trials are
 performed, but this can be overridden with the `TRIALS` environment
 variable.
+
+### `getent.rkt`
+
+Usage:
+
+    getent.rkt passwd|group KEY
+
+A poor-man's implementation of `getent`.
