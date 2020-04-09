@@ -13,7 +13,8 @@
          racket/list
          racket/match
          racket/struct
-         (rename-in ffi/unsafe (-> -->)))
+         (rename-in ffi/unsafe (-> -->))
+         ffi/unsafe/define)
 
 
 (provide
@@ -21,10 +22,10 @@
   (struct-out group)
 
   (contract-out
-    (username->user    (-> string? user?))
-    (uid->user         (-> exact-nonnegative-integer? user?))
-    (group-name->group (-> string? group?))
-    (gid->group        (-> exact-nonnegative-integer? group?))))
+    (username->user (-> string? user?))
+    (uid->user      (-> exact-nonnegative-integer? user?))
+    (name->group    (-> string? group?))
+    (gid->group     (-> exact-nonnegative-integer? group?))))
 
 
 ;; C type definitions
@@ -39,83 +40,108 @@
 
   ; C-to-Racket
   (lambda (ptr)
-    (define (build (built empty) (offset 0))
-      (define group (ptr-ref ptr _string offset))
+    (define (build (built empty))
+      (define group (ptr-ref ptr _string (length built)))
       (match group
         (#f          (reverse built))
-        ((? string?) (build (cons group built) (+ offset 1)))))
+        ((? string?) (build (cons group built)))))
 
     (build)))
 
-; NOTE This is the Linux definition, which differs in BSD (e.g., macOS)
+; NOTE This is the GNU definition, which differs from BSD (e.g., macOS)
 ;      and, strictly, POSIX (which doesn't define pw_gecos)
-(define-cstruct _c-passwd ((pw_name   _string)
-                           (pw_passwd _string)
-                           (pw_uid    _uid_t)
-                           (pw_gid    _gid_t)
-                           (pw_gecos  _string)
-                           (pw_dir    _path)
-                           (pw_shell  _path)))
+(define-cstruct _passwd/gnu ((pw_name   _string)
+                             (pw_passwd _string)
+                             (pw_uid    _uid_t)
+                             (pw_gid    _gid_t)
+                             (pw_gecos  _string)
+                             (pw_dir    _path)
+                             (pw_shell  _path)))
 
-(define-cstruct _c-group  ((gr_name   _string)
-                           (gr_passwd _string)
-                           (gr_gid    _gid_t)
-                           (gr_mem    _string/list)))
+; NOTE The group struct definition is consistent across libc implementations
+(define-cstruct _group/gnu  ((gr_name   _string)
+                             (gr_passwd _string)
+                             (gr_gid    _gid_t)
+                             (gr_mem    _string/list)))
 
 
 ;; User-facing structures
-(struct user (username password uid gid gecos home-directory shell))
-(struct group (group-name password gid members))
+(struct user (username password uid gid gecos home shell))
+(struct group (name password gid members))
+
+(define passwd/gnu->user (compose (curry apply user) passwd/gnu->list))
+(define group/gnu->group (compose (curry apply group) group/gnu->list))
 
 
-;; Wrapper for the FFI functions, which take one argument and return a
-;; a NULL pointer on failure, raised as an exception
-(define (libc-wrapper symbol input-type output-type)
-  (define ffi-fn
-    (get-ffi-obj symbol #f (_fun #:save-errno 'posix input-type --> output-type)))
+;; libc Wrappers
+(define-ffi-definer define-libc (ffi-lib #f))
 
-  (lambda (arg) (or (ffi-fn arg)
-                    (error 'FFI "~a failed [errno:~a]" symbol (saved-errno)))))
+(define (check-null fn)
+  (lambda (arg) (or (fn arg) (error 'FFI "Failed [errno:~a]" (saved-errno)))))
 
-(define getpwnam (libc-wrapper "getpwnam" _string _c-passwd-pointer/null))
-(define getpwuid (libc-wrapper "getpwuid" _uid_t  _c-passwd-pointer/null))
-(define getgrnam (libc-wrapper "getgrnam" _string _c-group-pointer/null))
-(define getgrgid (libc-wrapper "getgrgid" _gid_t  _c-group-pointer/null))
+(define-libc getpwnam
+  (_fun #:save-errno 'posix _string --> _passwd/gnu-pointer/null)
+  #:wrap check-null)
 
-(define c-passwd->user (compose (curry apply user) c-passwd->list))
-(define c-group->group (compose (curry apply group) c-group->list))
+(define-libc getpwuid
+  (_fun #:save-errno 'posix _uid_t  --> _passwd/gnu-pointer/null)
+  #:wrap check-null)
+
+(define-libc getgrnam
+  (_fun #:save-errno 'posix _string --> _group/gnu-pointer/null)
+  #:wrap check-null)
+
+(define-libc getgrgid
+  (_fun #:save-errno 'posix _gid_t  --> _group/gnu-pointer/null)
+  #:wrap check-null)
 
 
 ;; User-facing functions
-(define username->user    (compose c-passwd->user getpwnam))
-(define uid->user         (compose c-passwd->user getpwuid))
-(define group-name->group (compose c-group->group getgrnam))
-(define gid->group        (compose c-group->group getgrgid))
+(define username->user (compose passwd/gnu->user getpwnam))
+(define uid->user      (compose passwd/gnu->user getpwuid))
+(define name->group    (compose group/gnu->group getgrnam))
+(define gid->group     (compose group/gnu->group getgrgid))
 
 
 (module+ main
   (require racket/string)
 
+  (define (user->string user)
+    (format "~a:~a:~a:~a:~a:~a:~a" (user-username user)
+                                   (user-password user)
+                                   (user-uid      user)
+                                   (user-gid      user)
+                                   (user-gecos    user)
+                                   (user-home     user)
+                                   (user-shell    user)))
+
+  (define (group->string group)
+    (format "~a:~a:~a:~a" (group-name     group)
+                          (group-password group)
+                          (group-gid      group)
+                          (string-join (group-members group) ",")))
+
+  (define numeric-string? (curry regexp-match? #rx"^(0|[1-9][0-9]*)$"))
+
   ; Very basic frontend; not a replacement for getent!
   (match (current-command-line-arguments)
+    ((vector "passwd" uid) #:when (numeric-string? uid)
+     (let ((user (uid->user (string->number uid))))
+       (displayln (user->string user))))
+
     ((vector "passwd" username)
      (let ((user (username->user username)))
-       (displayln (format "~a:~a:~a:~a:~a:~a:~a" (user-username       user)
-                                                 (user-password       user)
-                                                 (user-uid            user)
-                                                 (user-gid            user)
-                                                 (user-gecos          user)
-                                                 (user-home-directory user)
-                                                 (user-shell          user)))))
+       (displayln (user->string user))))
+
+    ((vector "group" gid) #:when (numeric-string? gid)
+     (let ((group (gid->group (string->number gid))))
+       (displayln (group->string group))))
 
     ((vector "group" group-name)
-     (let ((group (group-name->group group-name)))
-       (displayln (format "~a:~a:~a:~a" (group-group-name group)
-                                        (group-password   group)
-                                        (group-gid        group)
-                                        (string-join (group-members group) ",")))))
+     (let ((group (name->group group-name)))
+       (displayln (group->string group))))
 
-    (_ (error "Not enough arguments"))))
+    (_ (error "Invalid arguments"))))
 
 
 (module+ test
@@ -124,5 +150,5 @@
   (check-equal? (user-uid (username->user "root")) 0)
   (check-equal? (user-username (uid->user 0)) "root")
 
-  (check-equal? (group-gid (group-name->group "root")) 0)
-  (check-equal? (group-group-name (gid->group 0)) "root"))
+  (check-equal? (group-gid (name->group "root")) 0)
+  (check-equal? (group-name (gid->group 0)) "root"))

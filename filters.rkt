@@ -27,7 +27,7 @@
 
 ;; Predicate on group match
 (define (group-match? group-name)
-  (let ((gid (number->string (group-gid (group-name->group group-name)))))
+  (let ((gid (number->string (group-gid (name->group group-name)))))
     (curry equal? gid)))
 
 

@@ -35,4 +35,5 @@ Usage:
 
     getent.rkt passwd|group KEY
 
-A poor-man's implementation of `getent`.
+A poor-man's implementation of `getent`. (Note that this requires a
+`glibc`-based runtime.)
