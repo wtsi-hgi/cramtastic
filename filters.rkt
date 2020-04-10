@@ -33,7 +33,7 @@
 
 ;; Predicate on owner match
 (define (owner-match? username)
-  (let ((uid (number->string (user-uid (username->user username)))))
+  (let ((uid (number->string (user-uid (name->user username)))))
     (curry equal? uid)))
 
 

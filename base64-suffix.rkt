@@ -57,10 +57,8 @@
   ; Trim the strings from the right and zip their characters together
   (define zipped-suffices
     (apply map list
-      (map
-        (compose (curryr take-right trim-length)
-                 string->list)
-        strings)))
+      (map (compose (curryr take-right trim-length) string->list)
+           strings)))
 
   ; Are all elements of the list the same?
   (define (homogeneous-list? haystack)
@@ -94,9 +92,8 @@
 
   ; Calculate the common suffix for each padding alignment
   (apply values
-    (map
-      (curry apply common-suffix)
-      sample-results)))
+    (map (curry apply common-suffix)
+         sample-results)))
 
 
 (module+ main

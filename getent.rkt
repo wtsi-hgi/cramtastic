@@ -22,18 +22,18 @@
   (struct-out group)
 
   (contract-out
-    (username->user (-> string? user?))
-    (uid->user      (-> exact-nonnegative-integer? user?))
-    (name->group    (-> string? group?))
-    (gid->group     (-> exact-nonnegative-integer? group?))))
+    (name->user  (-> string? user?))
+    (uid->user   (-> exact-nonnegative-integer? user?))
+    (name->group (-> string? group?))
+    (gid->group  (-> exact-nonnegative-integer? group?))))
 
 
 ;; C type definitions
 (define _uid_t _uint)
 (define _gid_t _uint)
 
-;; The group C struct's gr_mem element is a NULL-terminated array of
-;; strings; this pointer type recursively builds that out as a list.
+; NOTE The group C struct's gr_mem element is a NULL-terminated array of
+;      strings; this pointer type recursively builds that out as a list.
 (define-cpointer-type _string/list _pointer
   ; Racket-to-C: This should be treated as read-only, so we raise
   (lambda (_) (error "Cannot write to memory"))
@@ -66,7 +66,7 @@
 
 
 ;; User-facing structures
-(struct user (username password uid gid gecos home shell))
+(struct user (name password uid gid gecos home shell))
 (struct group (name password gid members))
 
 (define passwd/gnu->user (compose (curry apply user) passwd/gnu->list))
@@ -77,7 +77,8 @@
 (define-ffi-definer define-libc (ffi-lib #f))
 
 (define (check-null fn)
-  (lambda (arg) (or (fn arg) (error 'FFI "Failed [errno:~a]" (saved-errno)))))
+  (lambda args (or (apply fn args)
+                   (error 'FFI "Failed [errno:~a]" (saved-errno)))))
 
 (define-libc getpwnam
   (_fun #:save-errno 'posix _string --> _passwd/gnu-pointer/null)
@@ -97,17 +98,17 @@
 
 
 ;; User-facing functions
-(define username->user (compose passwd/gnu->user getpwnam))
-(define uid->user      (compose passwd/gnu->user getpwuid))
-(define name->group    (compose group/gnu->group getgrnam))
-(define gid->group     (compose group/gnu->group getgrgid))
+(define name->user  (compose passwd/gnu->user getpwnam))
+(define uid->user   (compose passwd/gnu->user getpwuid))
+(define name->group (compose group/gnu->group getgrnam))
+(define gid->group  (compose group/gnu->group getgrgid))
 
 
 (module+ main
   (require racket/string)
 
   (define (user->string user)
-    (format "~a:~a:~a:~a:~a:~a:~a" (user-username user)
+    (format "~a:~a:~a:~a:~a:~a:~a" (user-name     user)
                                    (user-password user)
                                    (user-uid      user)
                                    (user-gid      user)
@@ -130,7 +131,7 @@
        (displayln (user->string user))))
 
     ((vector "passwd" username)
-     (let ((user (username->user username)))
+     (let ((user (name->user username)))
        (displayln (user->string user))))
 
     ((vector "group" gid) #:when (numeric-string? gid)
@@ -147,8 +148,8 @@
 (module+ test
   (require rackunit)
 
-  (check-equal? (user-uid (username->user "root")) 0)
-  (check-equal? (user-username (uid->user 0)) "root")
+  (check-equal? (user-uid (name->user "root")) 0)
+  (check-equal? (user-name (uid->user 0)) "root")
 
   (check-equal? (group-gid (name->group "root")) 0)
   (check-equal? (group-name (gid->group 0)) "root"))
